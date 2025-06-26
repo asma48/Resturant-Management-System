@@ -1,0 +1,151 @@
+from app.database.database_config import get_db
+from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi.responses import JSONResponse
+from datetime import timedelta, datetime
+from typing import Annotated
+from pydantic import BaseModel, EmailStr
+from sqlalchemy.orm import Session
+
+from starlette import status
+from app.schemas.data_model import CreateEmploye, Token, EmployeInfo, EmployeToken, EmployeTokenResponse, EmployeData, ForgetPassword
+from app.models.database_models import Employe
+from passlib.context import CryptContext
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt, JWTError
+from ..utils.OTP import send_OTP_email
+
+
+
+
+router = APIRouter(
+    prefix = '/employe',
+    tags = ['Employe Account']
+)
+
+
+SECRET_KEY = 'dr53h35hbtbt5ngbr45nrth45rth5ngr5'
+ALGORITHM = 'HS256'
+
+
+bcrypt_context =  CryptContext(schemes= ['bcrypt'], deprecated= 'auto')
+
+
+bearer_scheme = HTTPBearer()
+
+db_dependecy = Annotated[Session, Depends(get_db)]
+
+
+@router.post("/create_account", status_code=status.HTTP_201_CREATED, response_model=EmployeInfo)
+def create_employe_account(db: db_dependecy, create_employe: CreateEmploye):
+        
+        create_employe = Employe(
+            name = create_employe.name,
+            email = create_employe.email,
+            password = bcrypt_context.hash(create_employe.password)     
+        )
+        db.add(create_employe)
+        db.commit()
+        db.refresh(create_employe)
+        return create_employe
+
+
+@router.post("/login")
+def employes_log_in( db: db_dependecy, employetoken: EmployeToken):
+    
+
+    employe = authenticate_employe(employetoken.email , employetoken.password, db)
+    if not employe:
+        return JSONResponse(content={"message": "Unauthorised Employe","status_code":404},
+         status_code=status.HTTP_401_UNAUTHORIZED)
+    
+    token = create_access_token(employetoken.email, timedelta(minutes=50))
+
+    return JSONResponse(content={
+        'message':"login succefully","status_code":200,
+        "access_token":token,
+        "data":{"id" :employe.id,  "email":employe.email}},
+                            status_code=status.HTTP_200_OK)
+
+
+@router.put("/forget_password")
+def forget_password(email: EmailStr, db: db_dependecy):
+
+    db_employe = db.query(Employe).filter(Employe.email == email).first()
+    if not db_employe:
+        return JSONResponse(content={
+        'message':"Email does not exist","status_code":404},
+                    status_code=status.HTTP_404_NOT_FOUND)
+    otp = send_OTP_email(email)
+    db_employe.otp = otp
+    db.commit()
+    db.refresh(db_employe)
+
+    return JSONResponse(content={
+        'message':"OTP sent Successfully to your email","status_code":200,
+        "data":{"Email" :db_employe.email}},status_code=status.HTTP_200_OK)
+
+
+
+
+@router.put("/reset_password")
+def reset_password(employe:ForgetPassword, db: db_dependecy):
+    db_employe = db.query(Employe).filter(Employe.email == employe.email).first()
+    if not db_employe:
+        return JSONResponse(content={
+        'message':"Wrong Email","status_code":404},
+                    status_code=status.HTTP_404_NOT_FOUND)
+    if employe.otp != db_employe.otp:
+        return JSONResponse(content={
+        'message':"OTP dose not match","status_code":404,},
+                    status_code=status.HTTP_404_NOT_FOUND)
+    if employe.new_password != employe.confirm_password:
+        return JSONResponse(content={
+        'message':"Password and confirm password does not match","status_code":400},
+                    status_code=status.HTTP_400_BAD_REQUEST)
+    db_employe.password = bcrypt_context.hash(employe.new_password)  
+    db_employe.otp = None 
+    db.commit()
+    db.refresh(db_employe)
+    return JSONResponse(content={
+        'message':"Password Reset Successfully","status_code":200,
+        "data":{"Email" :db_employe.email}},
+                            status_code=status.HTTP_200_OK)
+
+
+
+
+def authenticate_employe(email:str, password: str, db):
+    employe = db.query(Employe).filter(Employe.email == email).first()
+    if not employe:
+        return JSONResponse(content={"message":"Incorrect Email Address", "status_code":404}, 
+                        status_code=status.HTTP_404_NOT_FOUND)
+    if not bcrypt_context.verify(password, employe.password):
+        return JSONResponse(content={"message":"Incorrect Password", "status_code":404}, 
+                        status_code=status.HTTP_404_NOT_FOUND)
+    return employe
+
+
+def create_access_token(email: str, expire_delta: timedelta):
+    encode = {'sub': email }
+    expires = datetime.now() + expire_delta
+    encode.update({'exp': expires})
+    return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+
+def get_current_employe(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+
+    token = credentials.credentials
+    try:    
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: EmailStr = payload.get('sub')
+        if email is None:
+            return JSONResponse(content={
+            'message':"Unauthorised Employe","status_code":401},
+                        status_code=status.HTTP_401_UNAUTHORIZED)
+        return EmployeData(email = email)
+    except JWTError:
+        return JSONResponse(content={
+            'message':"Unauthorised Employe","status_code":401},
+                    status_code=status.HTTP_401_UNAUTHORIZED)
+
