@@ -12,14 +12,14 @@ from app.models.database_models import Employe
 from passlib.context import CryptContext
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
-from ..utils.OTP import send_OTP_email
+from ..utils.OTP import send_OTP_email 
 
 
 
 
-router = APIRouter(
+login_router = APIRouter(
     prefix = '/employe',
-    tags = ['Employe Account']
+    tags = ['Empolye']
 )
 
 
@@ -35,8 +35,8 @@ bearer_scheme = HTTPBearer()
 db_dependecy = Annotated[Session, Depends(get_db)]
 
 
-@router.post("/create_account", status_code=status.HTTP_201_CREATED, response_model=EmployeInfo)
-def create_employe_account(db: db_dependecy, create_employe: CreateEmploye):
+@login_router.post("/sign_up", status_code=status.HTTP_201_CREATED, response_model=EmployeInfo)
+def Sign_Up(db: db_dependecy, create_employe: CreateEmploye):
         
         create_employe = Employe(
             name = create_employe.name,
@@ -49,8 +49,8 @@ def create_employe_account(db: db_dependecy, create_employe: CreateEmploye):
         return create_employe
 
 
-@router.post("/login")
-def employes_log_in( db: db_dependecy, employetoken: EmployeToken):
+@login_router.post("/log_in")
+def Log_In( db: db_dependecy, employetoken: EmployeToken):
     
 
     employe = authenticate_employe(employetoken.email , employetoken.password, db)
@@ -67,7 +67,7 @@ def employes_log_in( db: db_dependecy, employetoken: EmployeToken):
                             status_code=status.HTTP_200_OK)
 
 
-@router.put("/forget_password")
+@login_router.put("/forget_password")
 def forget_password(email: EmailStr, db: db_dependecy):
 
     db_employe = db.query(Employe).filter(Employe.email == email).first()
@@ -87,7 +87,7 @@ def forget_password(email: EmailStr, db: db_dependecy):
 
 
 
-@router.put("/reset_password")
+@login_router.put("/reset_password")
 def reset_password(employe:ForgetPassword, db: db_dependecy):
     db_employe = db.query(Employe).filter(Employe.email == employe.email).first()
     if not db_employe:

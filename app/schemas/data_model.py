@@ -74,6 +74,7 @@ class CreateEmploye(BaseModel):
 class EmployeInfo(BaseModel):
     name: str
     id: int
+    email: EmailStr
 
 class ForgetPassword(BaseModel):
     email: EmailStr
