@@ -12,7 +12,7 @@ from app.models.database_models import Employe
 from passlib.context import CryptContext
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
-from ..utils.OTP import send_OTP_email 
+from ..utils.otp import send_OTP_email 
 
 
 

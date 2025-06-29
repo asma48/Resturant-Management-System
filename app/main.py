@@ -1,5 +1,8 @@
 from fastapi import FastAPI
-from app.routes.endpoint import menu_router, order_router, category_router, order_Type_router, employe_router
+from app.routes.employe import login_router
+from app.routes.menu import menu_router, category_router
+from app.routes.order_type import order_Type_router
+from app.routes.order import order_router
 from app.middlewares.auth import login_router
 
 
