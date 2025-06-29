@@ -5,10 +5,8 @@ from typing import List, Annotated
 from app.models.database_models import Order_Type, Bill, Menu, Employe
 from datetime import datetime
 from app.database.database_config import get_db
-
 from starlette import status
-from app.middlewares.auth import login_router 
-from app.middlewares.auth import get_current_employe, authenticate_employe
+from app.middlewares.jwt import get_current_employe, authenticate_employe
 
 
 db_session = Annotated[Session, Depends(get_db)]

@@ -6,7 +6,7 @@ from app.schemas.data_model import MenuBase, MenuResponse, CategoryResponse,  Me
 from app.models.database_models import Items,Menu
 from datetime import datetime
 from app.database.database_config import get_db
-from app.middlewares.auth import get_current_employe, authenticate_employe
+from app.middlewares.jwt import get_current_employe, authenticate_employe
 from starlette import status
 
 

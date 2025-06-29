@@ -6,9 +6,9 @@ from app.schemas.data_model import MenuBase, PlaceOrder, OrderResponse, Order_De
 from app.models.database_models import Items,Order, Order_Detail, Order_Type, Bill, Menu, Employe
 from datetime import datetime
 from app.database.database_config import get_db
-from app.middlewares.auth import get_current_employe, authenticate_employe
+from app.middlewares.jwt import get_current_employe, authenticate_employe
 from starlette import status
-from app.middlewares.auth import login_router 
+
 
 order_router  = APIRouter(
     prefix= "/order",
